@@ -1,0 +1,3 @@
+[submodule "rgn-kc-es/kafka-elasticsearch"]
+	path = rgn-kc-es/kafka-elasticsearch
+	url = https://github.com/rmoff/kafka-elasticsearch.git
