@@ -80,7 +80,7 @@
         POSTGRES_DB: root
       volumes:
       - ./docker/postgres:/docker-entrypoint-initdb.d
-  
+
     elasticsearch:
       image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
       container_name: elasticsearch
@@ -88,4 +88,15 @@
         - '9200:9200'
       environment:
         discovery.type: single-node
-  
+
+        
+    kibana:
+      image: kibana:7.12.0
+      container_name: kibana
+      depends_on:
+        - elasticsearch
+      ports:
+        - 5601:5601
+      environment:
+        ELASTICSEARCH_URL: http://elasticsearch:9200
+        ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'

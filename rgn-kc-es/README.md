@@ -4,6 +4,8 @@ Kafka Connector - Elastic Search Sink POC
 Setup
 -----
 
+Current docker-compose adapted from [Data Integration with ksqlDB and Kafka Connect](https://github.com/mitch-seymour/mastering-kafka-streams-and-ksqldb/tree/master/chapter-09). KC embedded into KSQLDB Server.
+
 ### Kafkacat install
 
 ```bash
@@ -143,6 +145,67 @@ CREATE SINK CONNECTOR SINK_ELASTIC_TEST_JSON_C WITH (
 
 curl -s http://elasticsearch:9200/test_json/_mapping | jq .
 ```
+
+(Getting Timestamps from Kafka to Elasticsearch)[https://www.youtube.com/watch?v=Cq-2eGxOCc8&t=1737s]
+
+```bash
+CREATE STREAM TEST02 (ROWKEY VARCHAR KEY, COL1 INT, ORDER_TS_EPOCH BIGINT, SHIP_TS_STR VARCHAR) WITH (KAFKA_TOPIC='test02', PARTITIONS=1, VALUE_FORMAT='AVRO');
+
+
+INSERT INTO TEST02 (ROWKEY, COL1, ORDER_TS_EPOCH, SHIP_TS_STR)
+VALUES ('MY_KEY__Y', 1, STRINGTOTIMESTAMP('2020-02-17T15:26:00Z', 'yyyy-MM-dd''T''HH:mm:ssX'), '2020-02-17T15:26:00Z');
+
+CREATE SINK CONNECTOR SINK_ELASTIC_TEST_02_A WITH (
+    'connector.class' = 'io.confluent.connect.elasticsearch.ElasticsearchSinkConnector',
+    'connection.url' = 'http://elasticsearch:9200',
+    'key.converter' = 'org.apache.kafka.connect.storage.StringConverter',
+    'value.converter' = 'io.confluent.connect.avro.AvroConverter',
+    'value.converter.schema.registry.url' = 'http://schema-registry:8081',
+    'type.name' = '_doc',
+    'topics' = 'test02',
+    'key.ignore' = 'false',
+    'schema.ignore' = 'false'
+);
+
+curl -s http://elasticsearch:9200/test02/_search \
+  -H 'content-type: application/json' \
+  -D '{"size": 42}' \
+  | jq -c '.hits.hits[]'
+
+curl -s http://elasticsearch:9200/test02/_mapping \
+  -H 'content-type: application/json' \
+  | jq -c .
+
+curl -s -XDELETE http://elasticsearch:9200/test02 \
+  -H 'content-type: application/json' \
+  | jq -c .
+
+
+```
+
+(https://www.youtube.com/watch?v=Cq-2eGxOCc8&t=1994s)[Using dynamic field mapping to guess at date field types]
+
+```bash
+CREATE SINK CONNECTOR SINK_ELASTIC_TEST_02_B WITH (
+    'connector.class' = 'io.confluent.connect.elasticsearch.ElasticsearchSinkConnector',
+    'connection.url' = 'http://elasticsearch:9200',
+    'key.converter' = 'org.apache.kafka.connect.storage.StringConverter',
+    'value.converter' = 'io.confluent.connect.avro.AvroConverter',
+    'value.converter.schema.registry.url' = 'http://schema-registry:8081',
+    'type.name' = '_doc',
+    'topics' = 'test02',
+    'key.ignore' = 'false',
+    'schema.ignore' = 'true'
+);
+
+# {"test02":{"mappings":{"properties":{"COL1":{"type":"long"},"ORDER_TS_EPOCH":{"type":"long"},"SHIP_TS_STR":{"type":"date"}}}}}
+
+
+
+```
+
+
+
 
 Quick troubleshoot
 
